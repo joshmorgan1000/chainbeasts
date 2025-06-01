@@ -54,7 +54,7 @@ The game never hides the math; it simply rewards curiosity with stronger beasts 
 | **\$CORE**   | Trade & governance    | Block reward proportional to proved compute | Breeding fees, trait locks                |
 | **\$ENERGY** | Pay‑as‑you‑train fuel | Earned in battles & validator attestations  | Every 128‑step micro‑batch, growth spurts |
 
-Full spec → [Token section of the whitepaper](whitepaper/ChainBeastsWhitepaper.tex#tokenomics).
+Full spec → [Token section of the whitepaper](whitepaper/ChainBeastsWhitepaper.md)
 Inflation curves are DAO‑tuned; ENERGY is non‑transferable to keep compute egalitarian.
 
 ---
@@ -77,19 +77,6 @@ Inflation curves are DAO‑tuned; ENERGY is non‑transferable to keep compute e
 * **Research value** – gradient traces + on‑chain datasets form an open ML corpora.
 
 The cost? Constraints on network size and INT‑only maths.  We think the educational upside dwarfs those limits.
-
----
-
-## 7  Document Map
-
-* Architecture blueprint → [Architecture.md](Architecture.md)
-* Deterministic kernel → [KERNEL\_SPEC.md](KERNEL_SPEC.md)
-* Variable anatomy & seeds → [HATCHING.md](HATCHING.md)
-* Battle & labels → [COMBAT\_TRAINING.md](COMBAT_TRAINING.md)
-* Private curricula → [PRIVATE\_CURRICULUM.md](PRIVATE_CURRICULUM.md)
-* Reveal protocol → [CURRICULUM\_REVEAL\_PROTOCOL.md](CURRICULUM_REVEAL_PROTOCOL.md)
-
-Start there, fork anything, share improvements—*that* is the spirit of Chain‑Beasts.
 
 ---
 
