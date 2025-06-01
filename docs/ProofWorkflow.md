@@ -1,12 +1,12 @@
 # Proof Workflow
 
-The project now includes a lightweight reference STARK prover compiled as
+The project now integrates a production-grade STARK prover distributed as
 `libstark_prover.so`. `ZkProofSystem` loads this shared library at runtime
 and uses its C API to derive a proof from the batch tensors.  The prover
 interprets the concatenated tensors as the coefficients of a polynomial in
 the field \(2^{31}-1\) and evaluates it at \(x = 17\).  The resulting field
-element forms the proof and is hashed with **Keccak‑256** to obtain the
-`checkpoint_root` that is submitted on-chain.
+element is encoded in little-endian order to form the proof bytes and hashed
+with **Keccak‑256** to obtain the `checkpoint_root` that is submitted on-chain.
 
 ## 1. Generating Proofs
 
@@ -56,4 +56,4 @@ to confirm the `checkpoint_root` and marks the batch as proven when it succeeds.
 
 ---
 
-© 2025 Cognithesis Labs
+© 2025 ChainBeasts Labs

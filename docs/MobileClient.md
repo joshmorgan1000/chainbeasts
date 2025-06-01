@@ -43,4 +43,4 @@ When everything is configured you will receive push notifications whenever battl
 
 ---
 
-© 2025 Cognithesis Labs – Draft
+© 2025 ChainBeasts Labs – Draft

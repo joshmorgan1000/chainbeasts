@@ -28,4 +28,4 @@ npx hardhat test  # with Hardhat
 
 ---
 
-© 2025 Cognithesis Labs – Draft
+© 2025 ChainBeasts Labs – Draft

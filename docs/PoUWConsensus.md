@@ -4,13 +4,14 @@ This guide describes how the sovereign PoUW chain replaces traditional mining wi
 
 ## 1. Overview
 
-Each block on the PoUW chain commits the root hash of a training batch. Miners execute a fixed number of kernel steps (128 by default) on the latest checkpoint, compute the BLAKE3 root of all tensors and submit it on-chain. Rewards are minted directly to the miner once the batch is verified.
+Each block on the PoUW chain commits the root hash of a training batch. Miners execute a fixed number of kernel steps (128 by default) on the latest checkpoint and compute a proof using the integrated STARK prover. The proof bytes are hashed with **Keccak‑256** to derive the `checkpoint_root` submitted on-chain. Rewards are minted directly to the miner once the batch is verified.
 
 ## 2. Mining a Block
 
 1. Sync the latest checkpoint from the chain.
 2. Run the reference kernel for `128` steps to produce the next state.
-3. Hash all tensors with BLAKE3 to derive `checkpoint_root`.
+3. Pass the batch tensors to `ZkProofSystem` which outputs the proof bytes and
+   computes `checkpoint_root = keccak256(proof)`.
 4. Sign the root with your wallet key.
 5. Submit `{creature_id, epoch, checkpoint_root, signature}` to the `TrainingLedger` contract using `chain-cli`.
 
@@ -90,7 +91,6 @@ validator_core_i  = core_reward * VALIDATOR_SPLIT * (stake_i / total_stake)
 The \$ENERGY reward refunds the energy spent so training remains cost neutral.
 
 ## 7. Further Reading
->>>>>>> theirs
 
 * [`docs/LocalDevnet.md`](LocalDevnet.md) – run a local PoUW node.
 * [`docs/ProofWorkflow.md`](ProofWorkflow.md) – generate proofs for batches using the integrated STARK-based workflow.

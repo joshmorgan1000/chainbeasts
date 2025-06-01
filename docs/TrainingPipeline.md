@@ -55,4 +55,150 @@ Each step emits a `TrainingMetrics` struct which is forwarded to all connected W
 
 ---
 
-© 2025 Cognithesis Labs – Draft
+# Combat & Training Logistics – Draft v0.1
+
+---
+
+## 1  Deterministic Combat Resolution
+
+| Phase             | Rule                                                                                                                           | Integer math                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| **Start‑of‑turn** | `stamina -= 1` if last action was `attack` or `block`. Creature with `stamina = 0` can *only* `block` until it rests one turn. | 8‑bit clamp                                 |
+| **Action commit** | Core net outputs logits `[move_N,S,E,W, atk_power, block_flag]`; appendage maps to legal action.                               | Argmax for move; `atk_power` saturates 0‑15 |
+| **Movement**      | Resolve first; hitting `WALL` cancels; entering `HAZARD` costs +2 stamina.                                                     |                                             |
+| **Attack**        | If adjacent: `damage = atk_power × (256 / (256 + enemy_defense))`                                                              | INT16 intermediate, floor                   |
+| **Block**         | `temp_def += 32` (cap 96) lasts one enemy hit then resets.                                                                     |                                             |
+| **Crit flag**     | If `critFlag == 1`, `damage ×= 2`.                                                                                             |                                             |
+| **Victory**       | Enemy HP ≤ 0 **or** max 60 turns.                                                                                              |                                             |
+
+*All constants stored in `SeasonRegistry` → tweakable without forking proof circuit.*
+
+---
+
+## 2  Training Labels
+
+| Head             | Label                                                      | Loss          |
+| ---------------- | ---------------------------------------------------------- | ------------- |
+| **Move logits**  | One‑hot of A\* optimal step toward enemy else zero vector. | Cross‑entropy |
+| **Attack power** | `(expected_damage × 15 / max_damage)` → int 0‑15.          | MSE           |
+| **Block flag**   | 1 if `temp_def < enemy_atk × 0.8`, else 0.                 | BCE           |
+
+### Curriculum
+
+* Epoch 0‑2: train **move** only.
+* Epoch 3‑5: unlock **attack power**.
+* Epoch 6+: unlock **block** head.
+
+LR schedule handles per‑epoch changes.
+
+---
+
+## 3  Sample Generation (Fully Deterministic)
+
+| Source               | Key derivation                                                      | Storage                       |
+| -------------------- | ------------------------------------------------------------------- | ----------------------------- |
+| **Self‑play**        | `(genesis_seed, checkpoint_root)` → PRNG for enemy moves.           | Regenerates on demand         |
+| **Real battles**     | Hash of board state from match log.                                 | Off‑chain cache pinned by key |
+| **Curriculum tasks** | Hard‑coded board templates; index = `blockHash(epoch_start)` mod N. | Kernel ROM table              |
+
+Trainer pulls sample → computes label via rules above → runs one SGD step. Validators/SNARK reproduce exactly.
+
+---
+
+## 4  ENERGY & Growth‑Spurts
+
+* Cost per micro‑step: `baseCost × activeParams/slabParams`.
+* **Growth‑spurt** unlocking a dormant slot burns extra ENERGY; kernel flips the slot bit in `activeMask` inside that 128‑step window.
+* Checkpoint payload: `{… energyBurn, activeMask, lrShift …}`. Contract locks ENERGY in the same tx.
+
+---
+
+## 5  Tunable Constants
+
+* `temp_def += 32` and cap 96.
+* Damage curve $currently hyperbola$.
+* Curriculum epoch lengths.
+
+*All tweakable via governance‑timelock; proof circuit unchanged.*
+
+---
+
+# Private Curriculum Sampling – Spec v0.1
+
+> *Purpose* Let owners “coach” their beasts with a private dataset while every gradient update stays verifiable and deterministic.
+
+---
+
+## 1  One‑time Commitment at Hatch
+
+| Field       | Size | Description                                             |
+| ----------- | ---- | ------------------------------------------------------- |
+| `C_dataset` | 32 B | `keccak256(zstd(dataset))` (owner‑supplied)             |
+| `S_owner`   | 32 B | Random secret chosen by wallet; never revealed on‑chain |
+
+Both values are embedded in the ERC‑721 token’s immutable metadata. `C_dataset = 0x0` means *no private curriculum*.
+
+---
+
+## 2  Sample Selection during Training
+
+```text
+# inside kernel, per micro‑step
+sampleIdx = splitMix64( seed_core ⊕ S_owner ⊕ globalStep ) mod DATASET_LEN
+```
+
+* `seed_core` standard hatch seed (see HATCHING.md).
+* `globalStep` monotonic counter stored in checkpoint.
+* Trainer loads `dataset[sampleIdx]` from local storage.
+
+Because `S_owner` never leaves the client, outsiders cannot predict sample order even if they guess the dataset.
+
+---
+
+## 3  Label Computation
+
+Labels follow the deterministic rules in **COMBAT\_TRAINING.md §2** using the selected sample.
+Validators that *do* possess the dataset can recompute labels; otherwise they skip label checks and only verify the lineage hash and loss‑drop flag.
+
+### Dispute Path
+
+1. Challenger posts a bond and supplies `{dataset, S_owner}`.
+2. Contract checks `keccak256(zstd(dataset)) == C_dataset`.
+3. Validators replay disputed checkpoints with full label verification.
+4. If divergence found → offender slashed, challenger rewarded.
+
+---
+
+## 4  Checkpoint Payload Extension
+
+Adds one new field:
+
+| Field        | Bytes | Note                                           |
+| ------------ | ----- | ---------------------------------------------- |
+| `globalStep` | 4     | Total micro‑steps since genesis (wraps at 2³²) |
+
+Other fields unchanged (`energyBurn, lrShift, activeMask, h128`).
+
+---
+
+## 5  ENERGY Economics
+
+* **No extra fee** to use a private curriculum—players already pay per step.
+* **Dispute filing bond** burns 2× the ENERGY window cost to deter spam.
+
+---
+
+## 6  Storage Notes
+
+* Dataset is *never* uploaded on‑chain.
+* Recommended max compressed size per beast: **512 kB** to keep audits tractable.
+
+---
+
+### Security & Research Angle
+
+Reverse‑engineering the hidden dataset from observed gradients becomes a real‑world penetration test for model‑stealing defenses—exactly the incentive the game hopes to spark.
+
+---
+
+© 2025 ChainBeasts Labs – Draft

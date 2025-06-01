@@ -33,4 +33,4 @@ Use the recorded frames to drive a UI or verify an on-chain result. Because the 
 
 ---
 
-© 2025 Cognithesis Labs
+© 2025 ChainBeasts Labs

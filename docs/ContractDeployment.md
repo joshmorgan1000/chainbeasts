@@ -53,4 +53,4 @@ Repeat the `forge create` command for every contract, passing the constructor ar
 
 ---
 
-© 2025 Cognithesis Labs
+© 2025 ChainBeasts Labs
