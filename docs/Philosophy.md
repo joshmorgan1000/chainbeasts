@@ -54,7 +54,7 @@ The game never hides the math; it simply rewards curiosity with stronger beasts 
 | **\$CORE**   | Trade & governance    | Block reward proportional to proved compute | Breeding fees, trait locks                |
 | **\$ENERGY** | Pay‑as‑you‑train fuel | Earned in battles & validator attestations  | Every 128‑step micro‑batch, growth spurts |
 
-Full spec → [Token section of the whitepaper](whitepaper/ChainBeastsWhitepaper.tex#tokenomics).
+Full spec → [Token section of the whitepaper](whitepaper/ChainBeastsWhitepaper.md)
 Inflation curves are DAO‑tuned; ENERGY is non‑transferable to keep compute egalitarian.
 
 ---
