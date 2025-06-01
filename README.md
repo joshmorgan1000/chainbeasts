@@ -1,4 +1,4 @@
-<p alighn="center"><img src="docs/images/chainbeasts.png" alt="Chain Beasts logo" width="400"></p>
+<p align="center"><img src="docs/images/chainbeasts.png" alt="Chain Beasts logo" width="400"></p>
 
 **Chain Beasts** lets you hatch true AI creatures on-chain, train them and test their might in verifiable battles, or collect and trade them as NFTs. Each creature is a quantised neural network, trained deterministically on a sovereign proof-of-useful-work (PoUW) blockchain.
 

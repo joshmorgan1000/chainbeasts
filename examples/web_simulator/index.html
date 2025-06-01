@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Neuropet Web Combat Simulator</title>
+<style>
+body { font-family: sans-serif; margin: 0; padding: 0; text-align: center; }
+canvas { border: 1px solid #555; margin-top: 40px; }
+.overlay { position: fixed; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 4px; font-size: 14px; }
+.top { top: 0; }
+.bottom { bottom: 0; white-space: pre-line; text-align: left; }
+.controls { margin-top: 260px; }
+</style>
+</head>
+<body>
+<div id="topOverlay" class="overlay top"></div>
+<canvas id="battleCanvas" width="480" height="240"></canvas>
+<div id="bottomOverlay" class="overlay bottom"></div>
+<div class="controls">
+<button id="hatchA">Hatch A</button>
+<button id="hatchB">Hatch B</button>
+<button id="trainA">Train A</button>
+<button id="trainB">Train B</button>
+<button id="battle">Battle</button>
+</div>
+<script type="module" src="./simulator.js"></script>
+</body>
+</html>

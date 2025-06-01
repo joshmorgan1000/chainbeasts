@@ -1,4 +1,4 @@
-# Project Philosophy – Chain‑Beasts
+# Project Philosophy – Chain Beasts
 
 *Revision 1 • 1 June 2025*
 
@@ -6,7 +6,7 @@
 
 ## 1  Why We’re Doing This
 
-Our **real goal** is to get *everyone*—kids, hobbyists, seasoned ML engineers—**hands‑on with training and fine‑tuning neural networks**.  Chain‑Beasts disguises that lesson inside a creature‑battling game where every click nudges parameters, burns compute, and leaves a cryptographically provable trace on‑chain.
+Our **real goal** is to get *everyone*—kids, hobbyists, seasoned ML engineers—**hands‑on with training and fine‑tuning neural networks**.  Chain Beasts disguises that lesson inside a creature‑battling game where every click nudges parameters, burns compute, and leaves a cryptographically provable trace on‑chain.
 
 1. **First‑contact learners** hatch a beast and visually watch loss drop as it learns to move or bite.
 2. **Tinkerers** discover private curricula, strategy‑specific fine‑tunes, and the joys of hyper‑parameter schedules.
@@ -77,19 +77,6 @@ Inflation curves are DAO‑tuned; ENERGY is non‑transferable to keep compute e
 * **Research value** – gradient traces + on‑chain datasets form an open ML corpora.
 
 The cost? Constraints on network size and INT‑only maths.  We think the educational upside dwarfs those limits.
-
----
-
-## 7  Document Map
-
-* Architecture blueprint → [Architecture.md](Architecture.md)
-* Deterministic kernel → [KERNEL\_SPEC.md](KERNEL_SPEC.md)
-* Variable anatomy & seeds → [HATCHING.md](HATCHING.md)
-* Battle & labels → [COMBAT\_TRAINING.md](COMBAT_TRAINING.md)
-* Private curricula → [PRIVATE\_CURRICULUM.md](PRIVATE_CURRICULUM.md)
-* Reveal protocol → [CURRICULUM\_REVEAL\_PROTOCOL.md](CURRICULUM_REVEAL_PROTOCOL.md)
-
-Start there, fork anything, share improvements—*that* is the spirit of Chain‑Beasts.
 
 ---
 

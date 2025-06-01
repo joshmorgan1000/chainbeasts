@@ -53,6 +53,24 @@ With the server running and the dataset prepared execute the demo program:
 
 Each step emits a `TrainingMetrics` struct which is forwarded to all connected WebSocket clients. Production trainers follow the same pattern but operate on real models and datasets.
 
+## 5. Production Pipeline Overview
+
+The official trainer links together the dataset cache, incremental graph
+cache and metrics streamer. When invoked with the same dataset URL and cache
+name, subsequent runs skip both the HTTP download and kernel compilation
+phases. See [IncrementalCache.md](IncrementalCache.md) for a detailed overview
+of how the graph cache stores compiled kernels between runs.
+
+```bash
+# example invocation using the demo binaries
+./build/metrics_demo           # reads train.cache and streams metrics
+```
+
+All caches reside under `.harmonics/cache` unless the
+`HARMONICS_CACHE_DIR` environment variable is set.  Sharing this directory
+across machines allows trainers to reuse compiled kernels and cached
+datasets, dramatically reducing startup time.
+
 ---
 
 # Combat & Training Logistics – Draft v0.1

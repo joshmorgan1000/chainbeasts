@@ -1,0 +1,8 @@
+[
+  {
+    "name": "sample_layer_plugin",
+    "version": "0.1.0",
+    "description": "Example plugin adding custom layers",
+    "url": "https://example.com/plugins/sample_layer_plugin-0.1.0.tar.gz"
+  }
+]

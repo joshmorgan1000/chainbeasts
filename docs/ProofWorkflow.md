@@ -2,11 +2,12 @@
 
 The project now integrates a production-grade STARK prover distributed as
 `libstark_prover.so`. `ZkProofSystem` loads this shared library at runtime
-and uses its C API to derive a proof from the batch tensors.  The prover
+and uses its C API to derive a proof from the batch tensors. The prover
 interprets the concatenated tensors as the coefficients of a polynomial in
-the field \(2^{31}-1\) and evaluates it at \(x = 17\).  The resulting field
-element is encoded in little-endian order to form the proof bytes and hashed
-with **Keccak‑256** to obtain the `checkpoint_root` that is submitted on-chain.
+the field \(2^{31}-1\) and evaluates it at \(x = 17\) using a lightweight
+FRI folding routine. The resulting field element is encoded in
+little-endian order to form the proof bytes and hashed with **Keccak‑256**
+to obtain the `checkpoint_root` that is submitted on-chain.
 
 ## 1. Generating Proofs
 
@@ -53,6 +54,15 @@ exports a small C API:
 using the `ZK_PROVER_PATH` environment variable) and forwards tensor data to
 these functions.  The on-chain verifier runs the matching verification circuit
 to confirm the `checkpoint_root` and marks the batch as proven when it succeeds.
+
+## 7. Integrating with `ZkProofSystem`
+
+`ZkProofSystem` acts as the bridge between the trainer and the on-chain
+verifier.  After each 128-step window the validator calls
+`generate_stark_proof()` with the concatenated tensors.  The resulting proof and
+root hash are forwarded to `submit_proof()` which relays them to the smart
+contract.  Set `ZK_PROVER_PATH` to point at a custom prover if the default
+`libstark_prover.so` is not in the library search path.
 
 ---
 

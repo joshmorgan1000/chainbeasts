@@ -32,3 +32,63 @@ Sensors feed the current tile type and relative opponent position into the creat
 ## 5. Determinism Notes
 
 The entire board state, creature stats and initial seed are hashed before the match begins. Validators replay the same sequence using the battle engine. Because movement and attacks use discrete coordinates and integer math, every node arrives at identical results.
+
+## 6. Example Layouts
+
+Below are two sample boards showing how walls (`W`) and hazards (`H`) can be
+arranged.  Coordinates start at the top‑left corner `(0,0)`.
+
+### 6.1 Wall Corridor
+
+```
+WWWWWWWW
+W......W
+W.WWWW.W
+W......W
+W......W
+W.WWWW.W
+W......W
+WWWWWWWW
+```
+
+### 6.2 Hazard Pits
+
+```
+........
+.HH..HH.
+........
+..WWWW..
+........
+........
+.HH..HH.
+........
+```
+
+### 6.3 Corner Forts
+
+```
+WWWWWWWW
+W......W
+W.H..H.W
+W......W
+W..WW..W
+W......W
+W.H..H.W
+WWWWWWWW
+```
+
+### 6.4 Central Hazard Ring
+
+```
+........
+..WWWW..
+.WHHHHW.
+.WH..HW.
+.WHHHHW.
+..WWWW..
+........
+........
+```
+
+These layouts are encoded row by row into the battle seed and verified by every
+replay client.

@@ -1,0 +1,8 @@
+[submodule "third_party/harmonics"]
+	path = third_party/harmonics
+	url = https://github.com/joshmorgan1000/libharmonics.git
+        branch = main
+[submodule "third_party/BLAKE3"]
+	path = third_party/BLAKE3
+	url = https://github.com/BLAKE3-team/BLAKE3.git
+        branch = master

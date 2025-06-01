@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "Neuropet",
+    "slug": "neuropet",
+    "version": "1.0.0",
+    "android": {
+      "googleServicesFile": "./google-services.json"
+    }
+  }
+}
