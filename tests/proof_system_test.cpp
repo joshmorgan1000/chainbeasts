@@ -11,6 +11,32 @@ TEST(ProofSystemTest, GenerateAndVerify) {
     EXPECT_EQ(std::fabs(proof.loss - expected_loss) < 1e-5f, true);
 }
 
+TEST(ProofSystemTest, HandlesEmptyTensors) {
+    neuropet::Validator v(3, neuropet::Blake3ProofSystem::instance());
+    std::vector<std::vector<int8_t>> tensors{};
+    auto proof = v.generate_stark_proof(tensors);
+    EXPECT_EQ(v.verify_stark_proof(tensors, proof), true);
+    EXPECT_EQ(proof.loss, 0.0f);
+}
+
+TEST(ProofSystemTest, HandlesSingleTensor) {
+    neuropet::Validator v(3, neuropet::Blake3ProofSystem::instance());
+    std::vector<std::vector<int8_t>> tensors{{1, 2, 3}};
+    auto proof = v.generate_stark_proof(tensors);
+    EXPECT_EQ(v.verify_stark_proof(tensors, proof), true);
+    EXPECT_EQ(proof.loss, 0.0f);
+}
+
+TEST(ProofSystemTest, RejectsMismatchedData) {
+    neuropet::Validator v(3, neuropet::Blake3ProofSystem::instance());
+    std::vector<std::vector<int8_t>> t1{{2, 1, 0, 0, 3, 2}, {1, 0, 0, 0, 3, 1}};
+    auto proof = v.generate_stark_proof(t1);
+    auto t2 = t1;
+    if (!t2.empty() && !t2[0].empty())
+        t2[0][0] ^= 1;
+    EXPECT_EQ(v.verify_stark_proof(t2, proof), false);
+}
+
 TEST(ProofSystemTest, RejectsTamperedProof) {
     neuropet::Validator v(3, neuropet::Blake3ProofSystem::instance());
     std::vector<std::vector<int8_t>> tensors{{1, 2, 3}};

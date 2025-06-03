@@ -57,3 +57,20 @@ Set `HARMONICS_CACHE_DIR=/custom/path` before building to override the
 default location. Use `scripts/clear-cache.sh` to remove old entries
 when the cache needs to be invalidated.
 
+## Cache Management
+
+`cache_cli` offers a simple way to inspect or purge cached objects. The
+tool respects the same `HARMONICS_CACHE_DIR` environment variable so it
+operates on the correct directory.
+
+```bash
+# list cached graph digests
+tools/cache_cli list
+
+# clear the entire cache
+tools/cache_cli clear
+```
+
+Both `cache_cli` and `scripts/clear-cache.sh` work across machines when
+the cache directory is shared.
+

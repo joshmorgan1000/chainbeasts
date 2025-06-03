@@ -43,6 +43,23 @@ neuropet::run_dataset_pipeline(base, "train.cache", 10, streamer);
 The first run downloads the dataset and writes `train.cache`. Subsequent runs
 read directly from the cache.
 
+### Real Dataset Example
+
+A small CSV file containing battle records is provided under `examples/battle_samples.csv`. Convert it to the HDF5 format using the `dataset_convert` tool:
+
+```bash
+dataset_convert --csv examples/battle_samples.csv -o battle.hdf5
+```
+
+Run the pipeline with the converted dataset:
+
+```cpp
+auto data = std::make_shared<harmonics::Hdf5Producer>("battle.hdf5");
+neuropet::run_dataset_pipeline(data, "train.cache", 10, streamer);
+```
+
+On subsequent runs `train.cache` is loaded immediately and `battle.hdf5` is only consulted when the cache is missing.
+
 ## 4. Run the Training Loop
 
 With the server running and the dataset prepared execute the demo program:
@@ -50,6 +67,14 @@ With the server running and the dataset prepared execute the demo program:
 ```bash
 ./build/metrics_demo
 ```
+To demonstrate checkpoint caching use the companion example:
+
+```bash
+./build/checkpoint_demo    # creates or updates trainer.ckpt
+```
+
+Running the program again resumes from the previous checkpoint and continues
+streaming metrics from the next step.
 
 Each step emits a `TrainingMetrics` struct which is forwarded to all connected WebSocket clients. Production trainers follow the same pattern but operate on real models and datasets.
 
@@ -70,6 +95,25 @@ All caches reside under `.harmonics/cache` unless the
 `HARMONICS_CACHE_DIR` environment variable is set.  Sharing this directory
 across machines allows trainers to reuse compiled kernels and cached
 datasets, dramatically reducing startup time.
+
+## 6. Continuous Training Integration
+
+Continuous training runs can resume seamlessly when both caches persist
+between sessions. Invoke the trainer with the same dataset cache name and
+graph cache key to pick up where the previous execution left off. Only new
+graph variations trigger kernel compilation while existing objects are loaded
+from the cache directory.
+
+The `tools/graph_cache_cli` utility helps manage cached kernels:
+
+```bash
+tools/graph_cache_cli list    # inspect cached digests
+tools/graph_cache_cli clear   # remove all cached kernels
+```
+
+Combined with dataset caching this allows workers to restart frequently
+without incurring download or compilation costs, enabling a continuous
+training loop.
 
 ---
 
@@ -119,7 +163,7 @@ LR schedule handles per‑epoch changes.
 | **Real battles**     | Hash of board state from match log.                                 | Off‑chain cache pinned by key |
 | **Curriculum tasks** | Hard‑coded board templates; index = `blockHash(epoch_start)` mod N. | Kernel ROM table              |
 
-Trainer pulls sample → computes label via rules above → runs one SGD step. Validators/SNARK reproduce exactly.
+Trainer pulls sample → computes label via rules above → runs one SGD step. Validators/STARK reproduce exactly.
 
 ---
 
@@ -175,7 +219,7 @@ Because `S_owner` never leaves the client, outsiders cannot predict sample order
 
 ## 3  Label Computation
 
-Labels follow the deterministic rules in **COMBAT\_TRAINING.md §2** using the selected sample.
+Labels follow the deterministic rules in **TrainingPipeline.md §1** using the selected sample.
 Validators that *do* possess the dataset can recompute labels; otherwise they skip label checks and only verify the lineage hash and loss‑drop flag.
 
 ### Dispute Path

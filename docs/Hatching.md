@@ -196,5 +196,5 @@ for (uint32_t step = 0; step < 128; ++step) {
 ## 11  Proof & Governance  Proof & Governance
 
 * **Phase 0** – quorum replay.
-* **Phase 1** – SNARK verifies: `loss↓ ∧ h_{t+128}` matches.
+* **Phase 1** – STARK verifies: `loss↓ ∧ h_{t+128}` matches.
 * Any change to object file → new `kernel_id` → governed 30‑day timelock before accept.

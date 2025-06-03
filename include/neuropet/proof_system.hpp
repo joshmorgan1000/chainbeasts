@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <openssl/evp.h>
-#include <openssl/sha.h>
 #include <string>
 #include <vector>
 
@@ -31,13 +30,14 @@ inline std::string blake3_digest(const void* data, std::size_t size) {
     return to_hex(out, BLAKE3_OUT_LEN);
 }
 
+/**
+ * @brief Compute a SHA-256 hash using the OpenSSL EVP interface.
+ */
 inline std::string sha256_digest(const void* data, std::size_t size) {
-    unsigned char out[SHA256_DIGEST_LENGTH];
-    SHA256_CTX ctx;
-    SHA256_Init(&ctx);
-    SHA256_Update(&ctx, data, size);
-    SHA256_Final(out, &ctx);
-    return to_hex(out, SHA256_DIGEST_LENGTH);
+    unsigned char out[32];
+    unsigned int outlen = sizeof(out);
+    EVP_Digest(data, size, out, &outlen, EVP_sha256(), nullptr);
+    return to_hex(out, outlen);
 }
 
 inline std::string keccak256_digest(const void* data, std::size_t size) {

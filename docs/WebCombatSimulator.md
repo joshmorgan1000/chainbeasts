@@ -51,7 +51,11 @@ This design outlines a minimal, deterministic combat simulator that runs entirel
 ## 4. Local Development
 
 1. Build the WebAssembly module as described in [`docs/WebAssembly.md`](WebAssembly.md).
-2. Serve the `index.html`, `neuropet.js` and `neuropet.wasm` files via a local HTTP server.
+2. Start the bundled static server from the repository root:
+   ```bash
+   node scripts/web_simulator_server.js
+   ```
+   This serves the simulator at `http://localhost:8080/`.
 3. Open the page in a modern browser with WebAssembly support and test creature actions directly.
 
 This simulator focuses on reproducibility and fast iteration. By keeping the stats on screen and exposing the same kernel functions as the on-chain implementation, designers can quickly balance the game and verify AI behaviour before deploying new rules.

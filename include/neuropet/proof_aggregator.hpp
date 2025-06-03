@@ -14,6 +14,7 @@
 
 #ifdef __unix__
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
@@ -46,6 +47,14 @@ class ProofAggregator {
 
 #ifdef __unix__
 
+/// Network statistics for profiling throughput.
+struct AggregatorNetStats {
+    std::atomic<std::uint64_t> bytes_sent{0};
+    std::atomic<std::uint64_t> bytes_received{0};
+    std::atomic<std::uint64_t> proofs_sent{0};
+    std::atomic<std::uint64_t> proofs_received{0};
+};
+
 /// Simple TCP server that distributes proofs to connected peers.
 class ProofAggregatorServer {
   public:
@@ -53,6 +62,9 @@ class ProofAggregatorServer {
     ~ProofAggregatorServer() { stop(); }
 
     unsigned short port() const { return port_; }
+
+    /// Inspect current network statistics.
+    const AggregatorNetStats& stats() const { return stats_; }
 
     /// Set a callback invoked whenever a proof is received.
     void set_callback(std::function<void(const StarkProof&)> cb) { on_proof_ = std::move(cb); }
@@ -73,13 +85,14 @@ class ProofAggregatorServer {
             ::close(fd);
             return false;
         }
+        set_nodelay(fd);
         {
             std::lock_guard<std::mutex> lock(clients_mutex_);
             clients_.push_back(fd);
         }
         std::thread(&ProofAggregatorServer::handle_client, this, fd).detach();
         for (const auto& p : agg_.all())
-            send_proof(fd, p);
+            send_proof(fd, p, &stats_);
         return true;
     }
 
@@ -92,6 +105,7 @@ class ProofAggregatorServer {
             running_ = false;
             return;
         }
+        set_nodelay(server_fd_);
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -185,12 +199,33 @@ class ProofAggregatorServer {
         return true;
     }
 
-    static bool send_proof(int fd, const StarkProof& p) {
-        return send_string(fd, p.root) && send_string(fd, p.proof) && send_float(fd, p.loss);
+    static void set_nodelay(int fd) {
+        int flag = 1;
+        ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
     }
 
-    static bool recv_proof(int fd, StarkProof& p) {
-        return recv_string(fd, p.root) && recv_string(fd, p.proof) && recv_float(fd, p.loss);
+    static bool send_proof(int fd, const StarkProof& p, AggregatorNetStats* s = nullptr) {
+        if (!send_string(fd, p.root) || !send_string(fd, p.proof) || !send_float(fd, p.loss))
+            return false;
+        if (s) {
+            s->bytes_sent += 4 + p.root.size();
+            s->bytes_sent += 4 + p.proof.size();
+            s->bytes_sent += 4;
+            ++s->proofs_sent;
+        }
+        return true;
+    }
+
+    static bool recv_proof(int fd, StarkProof& p, AggregatorNetStats* s = nullptr) {
+        if (!recv_string(fd, p.root) || !recv_string(fd, p.proof) || !recv_float(fd, p.loss))
+            return false;
+        if (s) {
+            s->bytes_received += 4 + p.root.size();
+            s->bytes_received += 4 + p.proof.size();
+            s->bytes_received += 4;
+            ++s->proofs_received;
+        }
+        return true;
     }
 
     void accept_loop() {
@@ -202,6 +237,7 @@ class ProofAggregatorServer {
                 else
                     break;
             }
+            set_nodelay(c);
             {
                 std::lock_guard<std::mutex> lock(clients_mutex_);
                 clients_.push_back(c);
@@ -213,7 +249,7 @@ class ProofAggregatorServer {
     void handle_client(int fd) {
         StarkProof p{};
         while (running_) {
-            if (!recv_proof(fd, p))
+            if (!recv_proof(fd, p, &stats_))
                 break;
             agg_.submit(p);
             broadcast(p);
@@ -230,7 +266,7 @@ class ProofAggregatorServer {
     void broadcast(const StarkProof& p) {
         std::lock_guard<std::mutex> lock(clients_mutex_);
         for (auto it = clients_.begin(); it != clients_.end();) {
-            if (!send_proof(*it, p)) {
+            if (!send_proof(*it, p, &stats_)) {
                 ::close(*it);
                 it = clients_.erase(it);
                 continue;
@@ -251,6 +287,7 @@ class ProofAggregatorServer {
     std::mutex clients_mutex_{};
     std::atomic<bool> running_{false};
     std::function<void(const StarkProof&)> on_proof_{};
+    AggregatorNetStats stats_{};
 };
 #endif // __unix__
 

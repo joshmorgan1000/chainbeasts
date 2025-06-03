@@ -6,3 +6,7 @@
 	path = third_party/BLAKE3
 	url = https://github.com/BLAKE3-team/BLAKE3.git
         branch = master
+[submodule "third_party/openssl"]
+	path = third_party/openssl
+	url = https://github.com/openssl/openssl.git
+	branch = OpenSSL_1_1_1-stable

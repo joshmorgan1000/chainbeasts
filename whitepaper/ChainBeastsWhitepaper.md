@@ -39,7 +39,7 @@ flowchart TD
   end
   F -->|checkpoint| B
   G -->|attest| C
-  H -->|SNARK| C
+  H -->|STARK| C
 ```
 
 ---
@@ -74,8 +74,8 @@ Encodes core‑layer widths, sensor & appendage slot counts (max 4 each). Inacti
 | ---- | ---------------------------------------------------- | ---------------------- |
 | 1    | Trainer runs 128 steps (≈18 M MACs).                 | Off‑chain CPU/GPU time |
 | 2    | Creates checkpoint `{root_hash, loss_flag, …}`.      | 25 k gas               |
-| 3    | Validators replay or verify SNARK.                   | 15–30 k gas            |
-| 4    | If ≥⅔ stake attest OR SNARK valid → block finalises. | —                      |
+| 3    | Validators replay or verify STARK.                   | 15–30 k gas            |
+| 4    | If ≥⅔ stake attest OR STARK valid → block finalises. | —                      |
 
 Block reward: `CORE = ENERGY_spent × CORE_PER_ENERGY`. Attesters share 10 %.
 
@@ -115,7 +115,7 @@ Emission schedule: 3 % annual CORE tail inflation → DAO treasury.
 | Milestone                                              |
 | ------------------------------------------------------ |
 | Test‑net (Phase 0 replay consensus, C++17 kernel)      |
-| Main‑net + Phase 1 SNARK verifier; marketplace live    |
+| Main‑net + Phase 1 STARK verifier; marketplace live    |
 | Recursive proofs, INT32 Pro League, mobile WASM client |
 | Creator economy (custom cosmetics, Lua rulebooks)      |
 

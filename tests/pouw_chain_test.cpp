@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 TEST(PoUWChainTest, RewardsAfterFinalization) {
-    neuropet::PoUWChain chain(2);
+    neuropet::PoUWChain chain(2, neuropet::Blake3ProofSystem::instance());
     chain.submit_checkpoint(1, 0, "dead", "miner", 1.0f, 5);
     chain.attest("dead");
     chain.attest("dead");
@@ -13,7 +13,7 @@ TEST(PoUWChainTest, RewardsAfterFinalization) {
 }
 
 TEST(PoUWChainTest, FinalizeWithProof) {
-    neuropet::PoUWChain chain(3);
+    neuropet::PoUWChain chain(3, neuropet::Blake3ProofSystem::instance());
     chain.submit_checkpoint(1, 0, "p0", "miner", 0.0f, 7);
     chain.submit_proof("p0");
     EXPECT_EQ(chain.finalize_checkpoint("p0"), true);
@@ -23,7 +23,7 @@ TEST(PoUWChainTest, FinalizeWithProof) {
 }
 
 TEST(PoUWChainTest, RejectEpochMismatch) {
-    neuropet::PoUWChain chain(1);
+    neuropet::PoUWChain chain(1, neuropet::Blake3ProofSystem::instance());
     chain.submit_checkpoint(1, 0, "r0", "miner", 1.0f, 3);
     chain.attest("r0");
     EXPECT_EQ(chain.finalize_checkpoint("r0"), true);
@@ -34,7 +34,7 @@ TEST(PoUWChainTest, RejectEpochMismatch) {
 }
 
 TEST(PoUWChainTest, RejectLossIncrease) {
-    neuropet::PoUWChain chain(1);
+    neuropet::PoUWChain chain(1, neuropet::Blake3ProofSystem::instance());
     chain.submit_checkpoint(1, 0, "r0", "miner", 1.0f, 4);
     chain.attest("r0");
     EXPECT_EQ(chain.finalize_checkpoint("r0"), true);

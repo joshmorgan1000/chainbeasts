@@ -50,7 +50,7 @@ Validators run 128‑step kernel batches; blocks include checkpoint roots **and 
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `CreatureNFT`    | 1‑per‑wallet hatch; stores DNA, immutable topology, initial hash                                                                   |
 | `TrainingLedger` | Records checkpoints `{ creature_id, epoch_id, global_step, root_hash, loss_flag, energy_spent, lr_shift, active_mask, rule_hash }` |
-| `ProofVerifier`  | Phase 0 quorum replay → Phase 1 SNARK → Phase 2 recursive proof                                                                    |
+| `ProofVerifier`  | Phase 0 quorum replay → Phase 1 STARK → Phase 2 recursive proof                                                                    |
 | `SeasonRegistry` | Constant tables (element matrix, trend vectors, energy curve)                                                                      |
 | `Marketplace`    | Trade, breed, lease creatures & cosmetic items                                                                                     |
 | `MatchLedger`    | Stores battle outcomes & hashes for dispute replay                                                                                 |
@@ -76,7 +76,7 @@ Validators run 128‑step kernel batches; blocks include checkpoint roots **and 
 flowchart TD
     A[Hatch Tx] -->|DNA seed| B(CreatureNFT)
     C(Client train) -->|checkpoint + proof| D(TrainingLedger)
-    E(Validators) -->|attest / SNARK| D
+    E(Validators) -->|attest / STARK proof| D
     D -->|reward| F[$CORE mint]
     C -->|battle req.| G(Matchmaker)
     G -->|results| H(MatchLedger)
@@ -99,12 +99,12 @@ flowchart TD
 1. **Hatch** – deterministic DNA.
 2. **Customise** – optional cosmetic & naming lock.
 3. **Train** – ENERGY burn, 128‑step checkpoints.
-4. **Private Coach** – per‑battle dataset reveal (see *CURRICULUM\_REVEAL\_PROTOCOL.md*).
+4. **Private Coach** – per‑battle dataset reveal (see *PreBattleCurriculum.md*).
 5. **Battle / Fashion** – deterministic engine + quadratic voting.
 
 ### 7.1 Battle Metrics
 
-* Power Score, Defense Score, Style Score, Stamina (see *COMBAT\_TRAINING.md*).
+* Power Score, Defense Score, Style Score, Stamina (see *TrainingPipeline.md* §1).
 
 ### 7.2 Fashion Duel Protocol
 
@@ -129,7 +129,7 @@ Custodian burns \$CORE on‑chain, releases fiat off‑chain under licences.
 | Phase | Verify                       | Prove        | Target   |
 | ----- | ---------------------------- | ------------ | -------- |
 | 0     | O(steps × validators) replay | —            | Test‑net |
-| 1     | O(1) SNARK                   | O(steps)     | +6 mo    |
+| 1     | O(1) STARK                   | O(steps)     | +6 mo    |
 | 2     | O(1) recursive               | O(log steps) | Season 3 |
 
 Monotonic loss enforced; if private dataset unrevealed, validators skip label checks and rely on lineage hash.
@@ -144,8 +144,8 @@ Monotonic loss enforced; if private dataset unrevealed, validators skip label ch
 * Kernel spec → `docs/KernelNeuralSpec.md`
 * Hatching seeds → `docs/Hatching.md`
 * Combat & labels → `docs/PreBattleCurriculum.md`
-* Private curricula → `docs/PRIVATE_CURRICULUM.md`
-* Reveal protocol → `docs/CURRICULUM_REVEAL_PROTOCOL.md`
+* Private curricula → `docs/PreBattleCurriculum.md`
+* Reveal protocol → `docs/PreBattleCurriculum.md`
 
 ---
 

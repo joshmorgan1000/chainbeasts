@@ -14,7 +14,7 @@ struct zk_proof_raw {
 
 namespace neuropet {
 
-/** Proof system backed by external STARK/SNARK circuits. */
+/** Proof system backed by external STARK circuits. */
 class ZkProofSystem : public IProofSystem {
   public:
     static const ZkProofSystem& instance();

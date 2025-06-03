@@ -1,4 +1,4 @@
-# Per‑Battle Curriculum Reveal Protocol – Draft v0.1
+# Per‑Battle Curriculum Reveal Protocol – v1.0
 
 ---
 
@@ -105,4 +105,26 @@ DAO could rebate 80 % of heavy storage to encourage innovation.
 
 ---
 
-© 2025 ChainBeasts Labs – draft
+## 8  Implementation Details
+
+The live protocol is implemented in `contracts/CurriculumDuel.sol`.  The
+contract exposes three functions:
+
+```text
+challenge(address opponent, uint256 battleBlock, bytes32 datasetCommit,
+          bytes32 secret, uint8 v, bytes32 r, bytes32 s)
+revealDataset(uint256 duelId, bytes calldata data, bytes32 secret)
+claimForfeit(uint256 duelId)
+```
+
+Client libraries wrap these calls for convenience:
+
+* `client/src/curriculum.ts` contains `CurriculumDuelClient` used by the web UI.
+* `include/neuropet/onchain_curriculum.hpp` defines `OnchainCurriculumDuel`
+  which validators use to fetch revealed datasets.
+* Validators invoke `load_curriculum(duelId, contract)` on `Validator` to cache
+  and decompress the dataset before replaying checkpoints.
+
+---
+
+© 2025 ChainBeasts Labs

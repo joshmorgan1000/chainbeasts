@@ -4,15 +4,15 @@ This guide explains how to move **CreatureNFT** tokens between blockchains. It a
 
 ## Overview
 
-Bridging works by locking the token on the origin chain and minting a mirror token on the destination chain. The creature's stats and training history remain intact because they are stored in the token metadata and replicated across chains.
+Bridging works by locking the token on the origin chain and minting a mirror token on the destination chain.  With proof‑based transfers the `bridgeOut` event now includes a `rootHash` that uniquely represents the creature's genesis weights and DNA.  Off‑chain validators generate a STARK proof for this hash which is checked by the destination chain before a mirror token can be minted.  The creature's stats and training history remain intact because they are stored in the token metadata and replicated across chains.
 
 ## Steps
 
 1. **Approve the bridge** – The owner approves the `CreatureNFTBridge` contract to transfer their token.
-2. **Lock on origin** – Call `bridgeOut(creatureId, dstChainId)` which transfers the token to the bridge and emits a proof event.
-3. **Relay the event** – Off‑chain relayers monitor bridge events and submit the proof to the destination chain.
-4. **Mint on destination** – The destination bridge verifies the proof and mints a new token representing the creature.
-5. **Return trip** – To move back, call `bridgeIn` on the destination chain which burns the mirror token and unlocks the original.
+2. **Lock on origin** – Call `bridgeOut(creatureId, dstChainId)` which transfers the token to the bridge and emits a `BridgeOut` event containing the creature's genesis weights, DNA and `rootHash`.
+3. **Generate proof** – A relayer or validator uses `bridge_cli` to fetch the event data and produce a STARK proof of the `rootHash`.  The proof is submitted to the `ProofVerifier` contract on the destination chain.
+4. **Mint on destination** – Once the proof is finalized, call `bridgeIn(tokenId, srcChainId, dstChainId, weights, dna, proof)` which verifies the proof and mints or releases the token.
+5. **Return trip** – To move back, the same flow is used with the source and destination chains swapped.
 
 ## Considerations
 

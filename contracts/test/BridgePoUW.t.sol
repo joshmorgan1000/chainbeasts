@@ -26,13 +26,13 @@ contract BridgePoUWTest is DSTest {
     function setUp() public {
         nftA = new CreatureNFT();
         nftB = new CreatureNFT();
-        bridgeA = new CreatureNFTBridge(address(nftA));
-        bridgeB = new CreatureNFTBridge(address(nftB));
+        zk = new ZkVerifier();
+        bridgeA = new CreatureNFTBridge(address(nftA), address(0));
+        bridgeB = new CreatureNFTBridge(address(nftB), address(0));
         nftA.setBridge(address(bridgeA));
         nftB.setBridge(address(bridgeB));
         energy = new Energy();
         core = new Core();
-        zk = new ZkVerifier();
         verifier = new ProofVerifier(address(zk));
         seasons = new SeasonRegistry(address(this));
         training = new TrainingLedger(address(energy), address(core), address(verifier), address(seasons));
@@ -43,7 +43,8 @@ contract BridgePoUWTest is DSTest {
         (bytes memory w, bytes32 dna) = nftA.creatures(tokenId);
         nftA.approve(address(bridgeA), tokenId);
         bridgeA.bridgeOut(tokenId, 2);
-        bridgeB.bridgeIn(tokenId, address(this), 1, w, dna);
+        bytes memory proof = abi.encode(tokenId, address(this), 2, w, dna);
+        bridgeB.bridgeIn(tokenId, address(this), 1, 2, w, dna, proof);
         assertEq(nftB.ownerOf(tokenId), address(this));
 
         bytes32 root = sha256(bytes("p0"));
@@ -56,7 +57,8 @@ contract BridgePoUWTest is DSTest {
 
         nftB.approve(address(bridgeB), tokenId);
         bridgeB.bridgeOut(tokenId, 1);
-        bridgeA.bridgeIn(tokenId, address(this), 2, w, dna);
+        proof = abi.encode(tokenId, address(this), 1, w, dna);
+        bridgeA.bridgeIn(tokenId, address(this), 2, 1, w, dna, proof);
         assertEq(nftA.ownerOf(tokenId), address(this));
     }
 }

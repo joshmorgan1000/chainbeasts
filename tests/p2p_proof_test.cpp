@@ -1,11 +1,18 @@
 #include "neuropet/proof_aggregator.hpp"
 #include "neuropet/validator.hpp"
 #include <chrono>
+#include <cstdlib>
+#include <filesystem>
 #include <gtest/gtest.h>
 #include <thread>
 
 #ifdef __unix__
 TEST(ValidatorTest, BroadcastAndIngest) {
+    const char* path = std::getenv("ZK_PROVER_PATH");
+    if (!path)
+        path = "./libstark_prover_v2.so";
+    if (!std::filesystem::exists(path))
+        return;
     neuropet::ProofAggregatorServer a(0);
     neuropet::ProofAggregatorServer b(0);
     a.start();

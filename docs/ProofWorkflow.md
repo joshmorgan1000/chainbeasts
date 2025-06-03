@@ -1,13 +1,38 @@
 # Proof Workflow
 
 The project now integrates a production-grade STARK prover distributed as
-`libstark_prover.so`. `ZkProofSystem` loads this shared library at runtime
+`libstark_prover_v2.so`. `ZkProofSystem` loads this shared library at runtime
 and uses its C API to derive a proof from the batch tensors. The prover
 interprets the concatenated tensors as the coefficients of a polynomial in
 the field \(2^{31}-1\) and evaluates it at \(x = 17\) using a lightweight
 FRI folding routine. The resulting field element is encoded in
 little-endian order to form the proof bytes and hashed with **Keccak‑256**
 to obtain the `checkpoint_root` that is submitted on-chain.
+
+
+To build the stub with CMake run:
+
+```bash
+cmake -S . -B build -DNEUROPET_BUILD_INTERNAL_PROVER=ON
+cmake --build build -j
+```
+
+If the resulting `libstark_prover_v2.so` is not on the library search path set
+the `ZK_PROVER_PATH` environment variable to its absolute location before
+starting the validator.
+
+OpenSSL's EVP API is used for all digest operations. The proof system
+invokes `EVP_Digest` directly, for example:
+
+```cpp
+unsigned char digest[32];
+unsigned int len = sizeof(digest);
+EVP_Digest(proof_bytes, sizeof(proof_bytes), digest,
+           &len, EVP_sha3_256(), nullptr);
+```
+
+Earlier versions relied on the now deprecated SHA‑256 helpers, which have
+been removed.
 
 ## 1. Generating Proofs
 
@@ -47,7 +72,7 @@ proof_cli tensors.bin --submit 127.0.0.1:8545 0x00000000000000000000000000000000
 
 ## 6. STARK Implementation Details
 
-The prover is distributed as the `libstark_prover.so` shared library which
+The prover is distributed as the `libstark_prover_v2.so` shared library which
 exports a small C API:
 `zk_generate_proof(const int8_t* data, size_t len, zk_proof_raw* out)` and
 `zk_verify_proof(...)`.  `ZkProofSystem` loads the library at startup (optionally
@@ -62,7 +87,7 @@ verifier.  After each 128-step window the validator calls
 `generate_stark_proof()` with the concatenated tensors.  The resulting proof and
 root hash are forwarded to `submit_proof()` which relays them to the smart
 contract.  Set `ZK_PROVER_PATH` to point at a custom prover if the default
-`libstark_prover.so` is not in the library search path.
+`libstark_prover_v2.so` is not in the library search path.
 
 ---
 

@@ -12,6 +12,7 @@
 #if __has_include(<harmonics/disk_cache_producer.hpp>)
 #include <harmonics/disk_cache_producer.hpp>
 #endif
+#include <fstream>
 #include <harmonics/function_registry.hpp>
 #include <harmonics/graph.hpp>
 #include <harmonics/parser.hpp>
@@ -261,6 +262,119 @@ cycle {
         return step >= steps;
     };
     g.fit_until(stop, make_auto_policy(), opt);
+}
+
+/**
+ * @brief Train on a dataset while caching both samples and checkpoints.
+ *
+ * The dataset is wrapped in ``DiskCacheProducer`` and all training state is
+ * saved to ``checkpoint_file`` after the loop. If the file exists the runtime
+ * resumes from the stored state so multiple invocations continue training
+ * seamlessly. ``MetricsStreamer`` receives the step index and gradient norm
+ * after every update.
+ */
+inline void run_dataset_checkpoint_pipeline(std::shared_ptr<harmonics::Producer> dataset,
+                                            const std::string& cache_name,
+                                            const std::string& checkpoint_file, std::size_t steps,
+                                            MetricsStreamer& streamer) {
+    using namespace harmonics;
+    register_builtin_shaders();
+#if __has_include(<harmonics/disk_cache_producer.hpp>)
+    auto cached = std::make_shared<harmonics::DiskCacheProducer>(dataset, cache_name);
+    std::shared_ptr<harmonics::Producer> src = cached;
+#else
+    (void)cache_name;
+    std::shared_ptr<harmonics::Producer> src = dataset;
+#endif
+
+    const char* src_graph = R"(
+producer input {1};
+producer target {1} 1/1 input;
+layer dense;
+cycle {
+  input -(relu)-> dense;
+  dense <-(mse)- target;
+}
+)";
+
+    Parser parser{src_graph};
+    auto ast = parser.parse_declarations();
+    auto g = build_graph(ast);
+    g.bindProducer("input", src);
+
+    struct ZeroProducer : Producer {
+        explicit ZeroProducer(std::size_t n) : n_{n} {}
+        HTensor next() override {
+            HTensor t{HTensor::DType::Float32, {1}};
+            t.data().resize(sizeof(float));
+            *reinterpret_cast<float*>(t.data().data()) = 0.0f;
+            return t;
+        }
+        std::size_t size() const override { return n_; }
+        std::size_t n_{};
+    };
+
+    auto lbl = std::make_shared<ZeroProducer>(src->size());
+    g.bindProducer("target", lbl);
+
+    CycleRuntime rt{g};
+
+    std::size_t start_step = 0;
+#if __has_include(<harmonics/disk_cache_producer.hpp>)
+    {
+        std::ifstream in(checkpoint_file, std::ios::binary);
+        if (in) {
+            rt.load_checkpoint(in);
+            in.read(reinterpret_cast<char*>(&start_step), sizeof(start_step));
+        }
+    }
+#else
+    (void)checkpoint_file;
+#endif
+
+    FitOptions opt;
+    opt.learning_rate = 0.1f;
+    std::vector<HTensor> params(rt.state().weights.size());
+    std::vector<HTensor> opt1(rt.state().weights.size());
+    std::vector<HTensor> opt2(rt.state().weights.size());
+    TrainingMetrics m{};
+    for (std::size_t i = 0; i < steps; ++i) {
+        rt.forward();
+        float norm = gradients_l2_norm(rt.state().weights);
+        for (std::size_t j = 0; j < params.size(); ++j) {
+            if (!rt.state().weights[j].shape().empty()) {
+                clip_tensor(rt.state().weights[j], opt.grad_clip);
+                switch (opt.optimizer) {
+                case Optimizer::SGD:
+                    apply_sgd_update(params[j], rt.state().weights[j], opt.learning_rate);
+                    break;
+                case Optimizer::Adam:
+                    apply_adam_update(params[j], rt.state().weights[j], opt1[j], opt2[j],
+                                      start_step + i + 1, opt.learning_rate);
+                    break;
+                case Optimizer::RMSProp:
+                    apply_rmsprop_update(params[j], rt.state().weights[j], opt1[j],
+                                         opt.learning_rate);
+                    break;
+                }
+            }
+        }
+        m.step = static_cast<std::uint32_t>(start_step + i + 1);
+        m.loss = norm;
+        streamer.push(m);
+    }
+    rt.state().weights = std::move(params);
+
+#if __has_include(<harmonics/disk_cache_producer.hpp>)
+    {
+        std::ofstream out(checkpoint_file, std::ios::binary);
+        rt.save_checkpoint(out);
+        std::size_t total = start_step + steps;
+        out.write(reinterpret_cast<const char*>(&total), sizeof(total));
+    }
+#else
+    (void)start_step;
+#endif
 }
 
 } // namespace neuropet

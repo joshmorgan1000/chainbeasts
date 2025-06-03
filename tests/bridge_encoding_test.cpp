@@ -36,13 +36,30 @@ TEST(BridgeEncodingTest, BridgeOutTx) {
 }
 
 TEST(BridgeEncodingTest, BridgeInTx) {
-    std::string tx = "0x4e463f9c";
+    std::string proof;
+    proof += neuropet::encode_uint256(1);
+    proof += encode_address("0xabc");
+    proof += neuropet::encode_uint256(2);
+    proof += neuropet::encode_bytes("deadbeef");
+    proof += neuropet::encode_bytes32("1234");
+
+    std::string tx = "0x4b42d211";
     tx += neuropet::encode_uint256(1);
     tx += encode_address("0xabc");
+    tx += neuropet::encode_uint256(1);
     tx += neuropet::encode_uint256(2);
     tx += neuropet::encode_bytes("deadbeef");
     tx += neuropet::encode_bytes32("1234");
-    EXPECT_EQ(tx, "0x4e463f9c"
+    tx += neuropet::encode_bytes(proof);
+    EXPECT_EQ(tx, "0x4b42d211"
+                  "0000000000000000000000000000000000000000000000000000000000000001"
+                  "0000000000000000000000000000000000000000000000000000000000000abc"
+                  "0000000000000000000000000000000000000000000000000000000000000001"
+                  "0000000000000000000000000000000000000000000000000000000000000002"
+                  "0000000000000000000000000000000000000000000000000000000000000004"
+                  "deadbeef00000000000000000000000000000000000000000000000000000000"
+                  "0000000000000000000000000000000000000000000000000000000000001234"
+                  "00000000000000000000000000000000000000000000000000000000000000c0"
                   "0000000000000000000000000000000000000000000000000000000000000001"
                   "0000000000000000000000000000000000000000000000000000000000000abc"
                   "0000000000000000000000000000000000000000000000000000000000000002"

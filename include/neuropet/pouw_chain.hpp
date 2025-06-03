@@ -17,6 +17,8 @@ class PoUWChain {
 
     explicit PoUWChain(std::size_t quorum = 3) : validator_(quorum) {}
 
+    PoUWChain(std::size_t quorum, const IProofSystem& sys) : validator_(quorum, sys) {}
+
     struct Block {
         std::uint32_t index{0};
         std::uint32_t creature_id{0};

@@ -21,7 +21,7 @@ TEST(ValidatorTest, ProveAndSubmit) {
 }
 
 TEST(ValidatorTest, RejectsLossIncrease) {
-    neuropet::Validator v;
+    neuropet::Validator v(3, neuropet::Blake3ProofSystem::instance());
     std::vector<std::vector<int8_t>> t1{{2, 1, 0, 0, 3, 2}, {1, 0, 0, 0, 3, 1}};
     auto p1 = v.generate_stark_proof(t1);
     EXPECT_EQ(v.verify_stark_proof(t1, p1), true);
@@ -31,7 +31,7 @@ TEST(ValidatorTest, RejectsLossIncrease) {
 }
 
 TEST(ValidatorTest, ReplayMismatch) {
-    neuropet::Validator v;
+    neuropet::Validator v(3, neuropet::Blake3ProofSystem::instance());
     std::vector<std::vector<int8_t>> t{{1, 2, 3}};
     auto p = v.generate_stark_proof(t);
     std::string other_root = p.root;

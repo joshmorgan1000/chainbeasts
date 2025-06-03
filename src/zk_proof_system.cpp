@@ -1,9 +1,9 @@
 #include "neuropet/zk_proof_system.hpp"
 #include <cstring>
-#if defined(__unix__)
-#include <dlfcn.h>
-#elif defined(_WIN32)
+#if defined(_WIN32)
 #include <windows.h>
+#elif defined(__unix__) || defined(__APPLE__)
+#include <dlfcn.h>
 #endif
 #include <cstdio>
 #include <cstdlib>
@@ -34,12 +34,20 @@ ZkProofSystem::ZkProofSystem() {
 #if defined(__APPLE__)
     const char* path = std::getenv("ZK_PROVER_PATH");
     if (!path)
-        path = "libstark_prover.dylib";
-    handle_ = dlopen(path, RTLD_LAZY);
-    if (!handle_ && std::strchr(path, '/') == nullptr) {
-        std::string local = std::string("./") + path;
-        handle_ = dlopen(local.c_str(), RTLD_LAZY);
-    }
+        path = "libstark_prover_v2.dylib";
+
+    auto try_load = [](const char* p) {
+        void* h = dlopen(p, RTLD_LAZY);
+        if (!h && std::strchr(p, '/') == nullptr) {
+            std::string local = std::string("./") + p;
+            h = dlopen(local.c_str(), RTLD_LAZY);
+        }
+        return h;
+    };
+
+    handle_ = try_load(path);
+    if (!handle_ && !std::getenv("ZK_PROVER_PATH"))
+        handle_ = try_load("libstark_prover.dylib");
     if (handle_) {
         gen_ = reinterpret_cast<GenerateFn>(dlsym(handle_, "zk_generate_proof"));
         verify_ = reinterpret_cast<VerifyFn>(dlsym(handle_, "zk_verify_proof"));
@@ -47,12 +55,20 @@ ZkProofSystem::ZkProofSystem() {
 #elif defined(__unix__)
     const char* path = std::getenv("ZK_PROVER_PATH");
     if (!path)
-        path = "libstark_prover.so";
-    handle_ = dlopen(path, RTLD_LAZY);
-    if (!handle_ && std::strchr(path, '/') == nullptr) {
-        std::string local = std::string("./") + path;
-        handle_ = dlopen(local.c_str(), RTLD_LAZY);
-    }
+        path = "libstark_prover_v2.so";
+
+    auto try_load = [](const char* p) {
+        void* h = dlopen(p, RTLD_LAZY);
+        if (!h && std::strchr(p, '/') == nullptr) {
+            std::string local = std::string("./") + p;
+            h = dlopen(local.c_str(), RTLD_LAZY);
+        }
+        return h;
+    };
+
+    handle_ = try_load(path);
+    if (!handle_ && !std::getenv("ZK_PROVER_PATH"))
+        handle_ = try_load("libstark_prover.so");
     if (handle_) {
         gen_ = reinterpret_cast<GenerateFn>(dlsym(handle_, "zk_generate_proof"));
         verify_ = reinterpret_cast<VerifyFn>(dlsym(handle_, "zk_verify_proof"));
@@ -60,12 +76,20 @@ ZkProofSystem::ZkProofSystem() {
 #elif defined(_WIN32)
     const char* path = std::getenv("ZK_PROVER_PATH");
     if (!path)
-        path = "stark_prover.dll";
-    handle_ = LoadLibraryA(path);
-    if (!handle_ && std::strchr(path, '\\') == nullptr) {
-        std::string local = std::string(".\\") + path;
-        handle_ = LoadLibraryA(local.c_str());
-    }
+        path = "stark_prover_v2.dll";
+
+    auto try_load = [](const char* p) {
+        HMODULE h = LoadLibraryA(p);
+        if (!h && std::strchr(p, '\\') == nullptr) {
+            std::string local = std::string(".\\") + p;
+            h = LoadLibraryA(local.c_str());
+        }
+        return h;
+    };
+
+    handle_ = try_load(path);
+    if (!handle_ && !std::getenv("ZK_PROVER_PATH"))
+        handle_ = try_load("stark_prover.dll");
     if (handle_) {
         gen_ = reinterpret_cast<GenerateFn>(
             GetProcAddress(static_cast<HMODULE>(handle_), "zk_generate_proof"));
@@ -82,12 +106,12 @@ ZkProofSystem::ZkProofSystem() {
 }
 
 ZkProofSystem::~ZkProofSystem() {
-#if defined(__unix__)
-    if (handle_)
-        dlclose(handle_);
-#elif defined(_WIN32)
+#if defined(_WIN32)
     if (handle_)
         FreeLibrary(static_cast<HMODULE>(handle_));
+#elif defined(__unix__) || defined(__APPLE__)
+    if (handle_)
+        dlclose(handle_);
 #endif
 }
 

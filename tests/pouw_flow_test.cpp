@@ -7,7 +7,7 @@ TEST(PoUWFlowTest, FinalizeWithP2P) {
     neuropet::ProofAggregatorServer p2p(0);
     p2p.start();
 
-    neuropet::PoUWChain chain(1);
+    neuropet::PoUWChain chain(1, neuropet::Blake3ProofSystem::instance());
     p2p.set_callback([&chain](const neuropet::StarkProof& p) { chain.attest(p.root); });
 
     neuropet::Validator v(1, neuropet::Blake3ProofSystem::instance(), &p2p);

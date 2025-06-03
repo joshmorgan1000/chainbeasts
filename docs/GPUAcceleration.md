@@ -53,6 +53,19 @@ or by calling `harmonics::set_vulkan_device_index()` before creating a
 `CycleRuntime`. The helper `int8_gpu_available()` reports whether the Vulkan
 runtime was successfully initialised.
 
+## 7. Kernel Optimisation Tips
+
+These hints help squeeze the most out of the Vulkan kernels:
+
+* Keep batch sizes in multiples of **32** so that work groups fully occupy the
+  compute units.
+* Cache compiled shaders between runs by leaving
+  `HARMONICS_KERNEL_CACHE_DISABLE=0` (the default).
+* Stage large buffers using asynchronous transfers to overlap data movement
+  with computation.
+* Tune `HARMONICS_VULKAN_GROUP_SIZE` to match the optimal local size for your
+  GPU architecture.
+
 ---
 
 With GPU acceleration enabled training and inference run significantly faster, especially for large creature models.

@@ -41,7 +41,7 @@ Because every slab is deterministic and proof‑friendly, players can swap shape
 | **Newbie**         | Hatch, watch loss graph drop.                                | Weight initialisation, SGD.         |
 | **Strate‑geek**    | Fine‑tune with private curriculum per match.                 | Curriculum learning, data leakage.  |
 | **Data scientist** | Attempt to infer opponent’s dataset from observed gradients. | Model inversion, gradient analysis. |
-| **Crypto hacker**  | Build alternative zk‑provers or break quorum replay.         | SNARKs, consensus economics.        |
+| **Crypto hacker**  | Build alternative zk‑provers or break quorum replay.         | STARKs, consensus economics.        |
 
 The game never hides the math; it simply rewards curiosity with stronger beasts or more \$CORE.
 
@@ -54,7 +54,7 @@ The game never hides the math; it simply rewards curiosity with stronger beasts 
 | **\$CORE**   | Trade & governance    | Block reward proportional to proved compute | Breeding fees, trait locks                |
 | **\$ENERGY** | Pay‑as‑you‑train fuel | Earned in battles & validator attestations  | Every 128‑step micro‑batch, growth spurts |
 
-Full spec → [Token section of the whitepaper](whitepaper/ChainBeastsWhitepaper.md)
+Full spec → [Token section of the whitepaper](whitepaper/ChainBeastsWhitepaper.tex#tokenomics).
 Inflation curves are DAO‑tuned; ENERGY is non‑transferable to keep compute egalitarian.
 
 ---

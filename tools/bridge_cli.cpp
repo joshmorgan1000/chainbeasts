@@ -1,4 +1,6 @@
 #include "neuropet/eth_encoding.hpp"
+#include "neuropet/onchain_verifier.hpp"
+#include "neuropet/proof_system.hpp" // for to_hex and keccak256_digest
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -15,6 +17,54 @@ using namespace neuropet;
 static std::string encode_address(const std::string& addr) {
     std::string h = strip_0x(addr);
     return std::string(64 - h.size(), '0') + h;
+}
+
+static std::vector<std::uint8_t> hex_to_bytes(const std::string& hex) {
+    std::string h = strip_0x(hex);
+    if (h.size() % 2)
+        h = "0" + h;
+    std::vector<std::uint8_t> out;
+    out.reserve(h.size() / 2);
+    for (std::size_t i = 0; i < h.size(); i += 2) {
+        out.push_back(static_cast<std::uint8_t>(std::stoi(h.substr(i, 2), nullptr, 16)));
+    }
+    return out;
+}
+
+static void append_uint256(std::vector<std::uint8_t>& out, std::uint64_t v) {
+    for (int i = 31; i >= 0; --i)
+        out.push_back(static_cast<std::uint8_t>(v >> (i * 8)));
+}
+
+static void append_address(std::vector<std::uint8_t>& out, const std::string& addr) {
+    std::string h = strip_0x(addr);
+    if (h.size() < 40)
+        h = std::string(40 - h.size(), '0') + h;
+    for (std::size_t i = 0; i < h.size(); i += 2)
+        out.push_back(static_cast<std::uint8_t>(std::stoi(h.substr(i, 2), nullptr, 16)));
+}
+
+static std::vector<std::uint8_t> read_bytes(const std::string& file) {
+    std::ifstream in(file, std::ios::binary);
+    return std::vector<std::uint8_t>((std::istreambuf_iterator<char>(in)),
+                                     std::istreambuf_iterator<char>());
+}
+
+static std::string compute_root_hash(std::uint32_t token,
+                                     const std::string& to,
+                                     std::uint32_t src_chain,
+                                     const std::vector<std::uint8_t>& weights,
+                                     const std::string& dna_hex) {
+    std::vector<std::uint8_t> buf;
+    append_uint256(buf, token);
+    append_address(buf, to);
+    append_uint256(buf, src_chain);
+    buf.insert(buf.end(), weights.begin(), weights.end());
+    auto dna_bytes = hex_to_bytes(dna_hex);
+    if (dna_bytes.size() < 32)
+        dna_bytes.insert(dna_bytes.begin(), 32 - dna_bytes.size(), 0);
+    buf.insert(buf.end(), dna_bytes.begin(), dna_bytes.end());
+    return keccak256_digest(buf.data(), buf.size());
 }
 
 static void send_tx(const std::string& host, unsigned short port, const std::string& contract,
@@ -60,17 +110,7 @@ static void send_tx(const std::string& host, unsigned short port, const std::str
 #endif
 }
 
-static std::string read_hex(const std::string& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream out;
-    unsigned char c;
-    while (in.read(reinterpret_cast<char*>(&c), 1)) {
-        char buf[3];
-        std::snprintf(buf, sizeof(buf), "%02x", c);
-        out << buf;
-    }
-    return out.str();
-}
+
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -95,9 +135,10 @@ int main(int argc, char** argv) {
         data += encode_uint256(dst);
         send_tx(host, port, contract, data);
     } else if (cmd == "in") {
-        if (argc != 9) {
+        if (argc != 11) {
             std::cout << "Usage: " << argv[0]
-                      << " in host:port contract tokenId to srcChainId weights.bin dnaHex" << std::endl;
+                      << " in host:port bridgeContract verifierContract tokenId to srcChainId dstChainId weights.bin dnaHex"
+                      << std::endl;
             return 1;
         }
         std::string hostport = argv[2];
@@ -105,17 +146,43 @@ int main(int argc, char** argv) {
         std::string host = hostport.substr(0, pos);
         unsigned short port = static_cast<unsigned short>(std::stoi(hostport.substr(pos + 1)));
         std::string contract = argv[3];
-        std::uint32_t token = static_cast<std::uint32_t>(std::stoul(argv[4]));
-        std::string to = argv[5];
-        std::uint32_t src = static_cast<std::uint32_t>(std::stoul(argv[6]));
-        std::string weights_hex = read_hex(argv[7]);
-        std::string dna_hex = argv[8];
-        std::string data = "0x4e463f9c";
+        std::string verifier_addr = argv[4];
+        std::uint32_t token = static_cast<std::uint32_t>(std::stoul(argv[5]));
+        std::string to = argv[6];
+        std::uint32_t src = static_cast<std::uint32_t>(std::stoul(argv[7]));
+        std::uint32_t dst = static_cast<std::uint32_t>(std::stoul(argv[8]));
+        std::vector<std::uint8_t> weights_bytes = read_bytes(argv[9]);
+        std::string weights_hex = to_hex(weights_bytes.data(), weights_bytes.size());
+        std::string dna_hex = argv[10];
+
+        std::string root = compute_root_hash(token, to, src, weights_bytes, dna_hex);
+        OnchainProofVerifier verifier(host, port, verifier_addr);
+        // Wait for the STARK proof to be finalised on-chain. Retry a few times
+        // so transient delays do not cause an unnecessary failure.
+        bool verified = false;
+        for (int i = 0; i < 5 && !verified; ++i) {
+            if (verifier.verify(root)) {
+                verified = true;
+            } else {
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+        }
+        if (!verified) {
+            std::cerr << "Proof not finalised on-chain" << std::endl;
+            return 1;
+        }
+        std::string data = "0x4b42d211";
         data += encode_uint256(token);
         data += encode_address(to);
         data += encode_uint256(src);
         data += encode_bytes(weights_hex);
         data += encode_bytes32(dna_hex);
+        std::string proof;
+        proof += encode_uint256(token);
+        proof += encode_address(to);
+        proof += encode_bytes(weights_hex);
+        proof += encode_bytes32(dna_hex);
+        data += encode_bytes(proof);
         send_tx(host, port, contract, data);
     } else {
         std::cout << "Unknown command: " << cmd << std::endl;

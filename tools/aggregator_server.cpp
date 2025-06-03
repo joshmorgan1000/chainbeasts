@@ -16,12 +16,14 @@ void handle_sigint(int) {
 }
 
 void usage(const char* prog) {
-    std::cerr << "Usage: " << prog << " [--port N] [--connect host:port ...]" << std::endl;
+    std::cerr << "Usage: " << prog << " [--port N] [--connect host:port ...]"
+              << " [--stats seconds]" << std::endl;
 }
 } // namespace
 
 int main(int argc, char** argv) {
     unsigned short port = 0;
+    int stats_interval = 0;
     std::vector<std::pair<std::string, unsigned short>> peers;
 
     for (int i = 1; i < argc; ++i) {
@@ -38,6 +40,8 @@ int main(int argc, char** argv) {
             std::string host = hp.substr(0, pos);
             unsigned short p = static_cast<unsigned short>(std::stoi(hp.substr(pos + 1)));
             peers.emplace_back(host, p);
+        } else if (arg == "--stats" && i + 1 < argc) {
+            stats_interval = std::stoi(argv[++i]);
         } else {
             usage(argv[0]);
             return 1;
@@ -52,8 +56,17 @@ int main(int argc, char** argv) {
     for (const auto& peer : peers)
         srv.connect(peer.first, peer.second);
 
-    while (true)
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+    while (true) {
+        int s = stats_interval > 0 ? stats_interval : 1;
+        std::this_thread::sleep_for(std::chrono::seconds(s));
+        if (stats_interval > 0) {
+            const auto& st = srv.stats();
+            std::cout << "[stats] sent=" << st.proofs_sent.load()
+                      << " recv=" << st.proofs_received.load()
+                      << " bytes_sent=" << st.bytes_sent.load()
+                      << " bytes_recv=" << st.bytes_received.load() << std::endl;
+        }
+    }
 
     return 0;
 }

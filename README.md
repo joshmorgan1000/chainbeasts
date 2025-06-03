@@ -97,6 +97,17 @@ $ ./build/validator --follow mempool
 
 > **Note**: The devnet uses mock time to advance blocks quickly. In mainnet mode, block rewards are issued for training work rather than traditional gas fees.
 
+### Web Combat Simulator
+
+To experiment with creature behaviour without running the full devnet, build the WebAssembly module and launch the static server:
+
+```bash
+(cd scripts && ./build_wasm.sh)
+node scripts/web_simulator_server.js
+```
+
+Open `http://localhost:8080` in your browser. See [`docs/WebCombatSimulator.md`](docs/WebCombatSimulator.md) for details.
+
 ## How It Works
 
 * **Genesis**: `seed = keccak256(finalized_block ∥ wallet)` → deterministic INT8 weights (≤64 KB).

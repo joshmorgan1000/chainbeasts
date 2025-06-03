@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 TEST(ValidatorTest, QuorumTracking) {
-    neuropet::Validator v(2);
+    neuropet::Validator v(2, neuropet::Blake3ProofSystem::instance());
     std::string r1 = "deadbeef";
     std::string r2 = "abba";
 

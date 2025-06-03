@@ -1,5 +1,6 @@
 #pragma once
 
+#include "neuropet/onchain_curriculum.hpp"
 #include "neuropet/proof_aggregator.hpp"
 #include "neuropet/proof_system.hpp"
 #include "neuropet/zk_proof_system.hpp"
@@ -78,6 +79,25 @@ class Validator {
         return proof_system_.generate_proof(tensors).root == expected_root;
     }
 
+    /**
+     * Fetch and cache a revealed dataset from the CurriculumDuel contract.
+     */
+    bool load_curriculum(std::uint64_t duel_id, const OnchainCurriculumDuel& contract) {
+        std::string hex;
+        if (!contract.get_dataset(duel_id, hex))
+            return false;
+        curricula_[duel_id] = decode_hex(hex);
+        return true;
+    }
+
+    /**
+     * Access a cached curriculum dataset.
+     */
+    const std::vector<std::uint8_t>* curriculum(std::uint64_t duel_id) const {
+        auto it = curricula_.find(duel_id);
+        return it == curricula_.end() ? nullptr : &it->second;
+    }
+
     /** Record an attestation for the given root hash. */
     void attest(const std::string& root) { ++counts_[root]; }
 
@@ -93,6 +113,7 @@ class Validator {
     ProofAggregatorServer* p2p_{nullptr};
     std::unordered_map<std::string, std::size_t> counts_{};
     mutable float last_loss_{std::numeric_limits<float>::infinity()};
+    std::unordered_map<std::uint64_t, std::vector<std::uint8_t>> curricula_{};
 };
 
 } // namespace neuropet

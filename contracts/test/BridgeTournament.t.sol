@@ -18,8 +18,8 @@ contract BridgeTournamentTest is DSTest {
     function setUp() public {
         nftA = new CreatureNFT();
         nftB = new CreatureNFT();
-        bridgeA = new CreatureNFTBridge(address(nftA));
-        bridgeB = new CreatureNFTBridge(address(nftB));
+        bridgeA = new CreatureNFTBridge(address(nftA), address(0));
+        bridgeB = new CreatureNFTBridge(address(nftB), address(0));
         nftA.setBridge(address(bridgeA));
         nftB.setBridge(address(bridgeB));
         seasons = new SeasonRegistry(address(this));

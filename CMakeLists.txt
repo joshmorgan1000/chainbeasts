@@ -2,9 +2,46 @@ cmake_minimum_required(VERSION 3.16)
 project(neuropet LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 include(CTest)
 enable_testing()
+
+# Build a private copy of OpenSSL so all platforms, including WASM,
+# use the same version. The library target is exposed as
+# ``OpenSSL::Crypto``.
+add_subdirectory(third_party/openssl)
+if(NOT TARGET OpenSSL::Crypto)
+    if(TARGET crypto)
+        add_library(OpenSSL::Crypto ALIAS crypto)
+    elseif(TARGET ossl_crypto)
+        add_library(OpenSSL::Crypto ALIAS ossl_crypto)
+    else()
+        message(FATAL_ERROR "OpenSSL crypto target not found")
+    endif()
+endif()
+
+# ------------------------------------------------------------------------------
+# zstd (for compression)
+# ------------------------------------------------------------------------------
+if(NOT EMSCRIPTEN)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(ZSTD REQUIRED libzstd)
+    list(REMOVE_ITEM ZSTD_INCLUDE_DIRS "/opt/homebrew/include")
+    find_path(ZSTD_INCLUDE_DIRS NAMES zstd.h)
+    find_library(ZSTD_LIBRARY   NAMES zstd REQUIRED)
+    add_library(zstd STATIC IMPORTED)
+    set_target_properties(zstd PROPERTIES
+        IMPORTED_LOCATION_RELEASE             "${ZSTD_LIBRARY}"
+        IMPORTED_LOCATION_DEBUG               "${ZSTD_LIBRARY}"
+        INTERFACE_SYSTEM_INCLUDE_DIRECTORIES  "${ZSTD_INCLUDE_DIRS}"
+    )
+    add_library(ZSTD::ZSTD ALIAS zstd)
+    add_library(zstd::zstd ALIAS zstd)
+else()
+    # Stub zstd for WASM builds
+    add_library(zstd INTERFACE)
+    add_library(ZSTD::ZSTD ALIAS zstd)
+    add_library(zstd::zstd ALIAS zstd)
+endif()
 
 # Optionally enable Vulkan support for GPU acceleration
 option(NEUROPET_ENABLE_VULKAN "Build with Vulkan GPU backend" OFF)
@@ -26,8 +63,6 @@ if(NEUROPET_ENABLE_VULKAN)
 else()
     find_package(Vulkan QUIET)
 endif()
-
-find_package(OpenSSL REQUIRED)
 
 set(BLAKE3_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/BLAKE3)
 set(BLAKE3_SOURCES
@@ -63,6 +98,9 @@ target_include_directories(int8_kernel INTERFACE
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
     target_compile_options(int8_kernel INTERFACE -mavx2)
     target_compile_definitions(int8_kernel INTERFACE NEUROPET_USE_AVX2)
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "i686" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86")
+    target_compile_options(int8_kernel INTERFACE -msse2)
+    target_compile_definitions(int8_kernel INTERFACE NEUROPET_USE_SSE2)
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
     target_compile_definitions(int8_kernel INTERFACE NEUROPET_USE_NEON)
 endif()
@@ -76,13 +114,6 @@ target_include_directories(zk_stub PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 target_link_libraries(zk_stub PUBLIC BLAKE3::blake3 OpenSSL::Crypto)
-
-add_library(stark_prover SHARED src/stark_prover.cpp)
-target_include_directories(stark_prover PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-    ${BLAKE3_DIR}/c)
-target_link_libraries(stark_prover PUBLIC OpenSSL::Crypto BLAKE3::blake3)
 
 add_library(validator INTERFACE)
 target_include_directories(validator INTERFACE
@@ -118,12 +149,23 @@ target_link_libraries(training INTERFACE int8_kernel metrics)
 add_executable(metrics_demo examples/metrics_demo.cpp)
 target_link_libraries(metrics_demo PRIVATE training)
 
+add_custom_target(graph_cache_init
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/init-cache.sh
+    COMMENT "Preparing graph cache directory")
+add_dependencies(metrics_demo graph_cache_init)
+
 add_executable(plugin_demo examples/plugin_demo.cpp)
 target_include_directories(plugin_demo PRIVATE include third_party/harmonics/include)
 target_link_libraries(plugin_demo PRIVATE dl)
+add_dependencies(plugin_demo graph_cache_init)
+
+add_executable(checkpoint_demo examples/checkpoint_demo.cpp)
+target_link_libraries(checkpoint_demo PRIVATE training)
+add_dependencies(checkpoint_demo graph_cache_init)
 
 add_executable(onchain_arena_demo examples/onchain_arena_demo.cpp)
 target_link_libraries(onchain_arena_demo PRIVATE arena)
+add_dependencies(onchain_arena_demo graph_cache_init)
 
 add_executable(proof_cli tools/proof_cli.cpp)
 target_include_directories(proof_cli PRIVATE include third_party/harmonics/include)
@@ -169,11 +211,24 @@ target_include_directories(cache_test PRIVATE tests include third_party/harmonic
 target_link_libraries(cache_test PRIVATE training)
 add_test(NAME cache_test COMMAND cache_test)
 
+add_executable(cache_cli_test tests/cache_cli_test.cpp)
+target_include_directories(cache_cli_test PRIVATE tests include third_party/harmonics/tests)
+add_test(NAME cache_cli_test COMMAND cache_cli_test)
+
+add_executable(graph_cache_cli_test tests/graph_cache_cli_test.cpp)
+target_include_directories(graph_cache_cli_test PRIVATE tests include third_party/harmonics/tests)
+add_test(NAME graph_cache_cli_test COMMAND graph_cache_cli_test)
+
 
 add_executable(sensor_test tests/sensor_test.cpp)
 target_include_directories(sensor_test PRIVATE tests include third_party/harmonics/tests)
 target_link_libraries(sensor_test PRIVATE training)
 add_test(NAME sensor_test COMMAND sensor_test)
+
+add_executable(graph_cache_test tests/graph_cache_test.cpp)
+target_include_directories(graph_cache_test PRIVATE tests include third_party/harmonics/include third_party/harmonics/tests)
+target_link_libraries(graph_cache_test PRIVATE BLAKE3::blake3)
+add_test(NAME graph_cache_test COMMAND graph_cache_test)
 
 add_executable(model_size_test tests/model_size_test.cpp)
 target_include_directories(model_size_test PRIVATE tests include third_party/harmonics/tests)
@@ -214,11 +269,6 @@ target_include_directories(zk_proof_system_test PRIVATE tests include third_part
 target_link_libraries(zk_proof_system_test PRIVATE validator)
 add_test(NAME zk_proof_system_test COMMAND zk_proof_system_test)
 
-add_executable(stark_prover_test tests/stark_prover_test.cpp)
-target_include_directories(stark_prover_test PRIVATE tests include third_party/harmonics/tests)
-target_link_libraries(stark_prover_test PRIVATE stark_prover)
-add_test(NAME stark_prover_test COMMAND stark_prover_test)
-
 add_executable(matchmaker_test tests/matchmaker_test.cpp)
 target_include_directories(matchmaker_test PRIVATE tests include third_party/harmonics/tests)
 target_link_libraries(matchmaker_test PRIVATE arena)
@@ -234,6 +284,11 @@ target_include_directories(pouw_flow_test PRIVATE tests include third_party/harm
 target_link_libraries(pouw_flow_test PRIVATE validator)
 add_test(NAME pouw_flow_test COMMAND pouw_flow_test)
 
+add_executable(pouw_fuzz_test tests/pouw_fuzz_test.cpp)
+target_include_directories(pouw_fuzz_test PRIVATE tests include third_party/harmonics/tests)
+target_link_libraries(pouw_fuzz_test PRIVATE validator)
+add_test(NAME pouw_fuzz_test COMMAND pouw_fuzz_test)
+
 add_executable(graph_diff_cli_test tests/graph_diff_cli_test.cpp)
 target_include_directories(graph_diff_cli_test PRIVATE tests third_party/harmonics/include third_party/harmonics/tests)
 target_link_libraries(graph_diff_cli_test PRIVATE BLAKE3::blake3)
@@ -248,8 +303,12 @@ endif()
 
 add_executable(cache_cli tools/cache_cli.cpp)
 target_include_directories(cache_cli PRIVATE include)
+
+add_executable(graph_cache_cli tools/graph_cache_cli.cpp)
+target_include_directories(graph_cache_cli PRIVATE include)
 add_executable(bridge_cli tools/bridge_cli.cpp)
-target_include_directories(bridge_cli PRIVATE include)
+target_include_directories(bridge_cli PRIVATE include third_party/harmonics/include)
+target_link_libraries(bridge_cli PRIVATE validator)
 
 add_executable(graph_diff_cli tools/graph_diff_cli.cpp)
 target_include_directories(graph_diff_cli PRIVATE
@@ -260,12 +319,14 @@ target_link_libraries(graph_diff_cli PRIVATE BLAKE3::blake3)
 add_executable(simulation_cli tools/simulation_cli.cpp)
 target_include_directories(simulation_cli PRIVATE include)
 target_link_libraries(simulation_cli PRIVATE arena training)
+add_dependencies(simulation_cli graph_cache_init)
 
 add_executable(aggregator_server tools/aggregator_server.cpp)
 target_include_directories(aggregator_server PRIVATE
     include
     third_party/BLAKE3/c)
 target_link_libraries(aggregator_server PRIVATE BLAKE3::blake3)
+add_dependencies(aggregator_server graph_cache_init)
 
 add_executable(int8_kernel_bench benchmarks/int8_kernel_bench.cpp)
 target_include_directories(int8_kernel_bench PRIVATE include third_party/harmonics/include)
